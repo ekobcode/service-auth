@@ -1,0 +1,142 @@
+// package main
+
+// import (
+// 	"encoding/json"
+// 	"io/ioutil"
+// 	"log"
+// 	"math/rand"
+// 	"net/http"
+// 	"os"
+// 	"time"
+
+// 	"github.com/prometheus/client_golang/prometheus"
+// 	"github.com/prometheus/client_golang/prometheus/promhttp"
+// )
+
+// // Profile adalah struktur data untuk profil pengguna
+// type Profile struct {
+// 	Nama       string       `json:"nama"`
+// 	Umur       int          `json:"umur"`
+// 	Alamat     Alamat       `json:"alamat"`
+// 	Email      string       `json:"email"`
+// 	Telepon    string       `json:"telepon"`
+// 	Pekerjaan  string       `json:"pekerjaan"`
+// 	Minat      []string     `json:"minat"`
+// 	Pengalaman []Pengalaman `json:"pengalaman"`
+// }
+
+// // Alamat adalah struktur data untuk alamat pengguna
+// type Alamat struct {
+// 	Jalan   string `json:"jalan"`
+// 	Kota    string `json:"kota"`
+// 	KodePos string `json:"kode_pos"`
+// }
+
+// // Pengalaman adalah struktur data untuk riwayat pekerjaan pengguna
+// type Pengalaman struct {
+// 	Perusahaan   string `json:"perusahaan"`
+// 	Posisi       string `json:"posisi"`
+// 	TahunMulai   int    `json:"tahun_mulai"`
+// 	TahunSelesai *int   `json:"tahun_selesai"`
+// }
+
+// // Response adalah struktur data untuk respons API
+// type Response struct {
+// 	Status        int     `json:"status"`
+// 	Message       Profile `json:"message"`
+// 	TransactionID string  `json:"transaction_id"`
+// }
+
+// var (
+// 	apiHits = prometheus.NewCounterVec(
+// 		prometheus.CounterOpts{
+// 			Name: "http_status",
+// 			Help: "The HTTP request status.",
+// 		},
+// 		[]string{"hostname", "route", "code"},
+// 	)
+// )
+
+// func init() {
+// 	prometheus.MustRegister(apiHits)
+// 	rand.Seed(time.Now().UnixNano()) // Menyeting seed untuk random generator
+// }
+
+// func main() {
+// 	http.HandleFunc("/api/profile", profileHandler)
+// 	http.Handle("/metrics", promhttp.Handler())
+// 	log.Fatal(http.ListenAndServe(":8080", nil))
+// }
+
+// func profileHandler(w http.ResponseWriter, r *http.Request) {
+// 	// Increment hit counter
+// 	apiHits.WithLabelValues(getHostname(), "api/profile", "200").Inc()
+
+// 	// Memastikan hanya permintaan GET yang diizinkan
+// 	if r.Method != http.MethodGet {
+// 		http.Error(w, "Metode tidak diizinkan", http.StatusMethodNotAllowed)
+// 		apiHits.WithLabelValues(getHostname(), "api/profile", "405").Inc()
+// 		return
+// 	}
+
+// 	// Membaca data dari file JSON
+// 	data, err := ioutil.ReadFile("v2.json")
+// 	if err != nil {
+// 		http.Error(w, "Gagal membaca file JSON", http.StatusInternalServerError)
+// 		apiHits.WithLabelValues(getHostname(), "api/profile", "500").Inc()
+// 		return
+// 	}
+
+// 	// Mem-parsing data JSON ke dalam struktur Profile
+// 	var profil Profile
+// 	err = json.Unmarshal(data, &profil)
+// 	if err != nil {
+// 		http.Error(w, "Gagal mem-parsing JSON", http.StatusInternalServerError)
+// 		apiHits.WithLabelValues(getHostname(), "api/profile", "500").Inc()
+// 		return
+// 	}
+
+// 	// Membuat respons
+// 	response := Response{
+// 		Status:        http.StatusOK,
+// 		Message:       profil,
+// 		TransactionID: generateTransactionID(),
+// 	}
+
+// 	// Mengonversi struct respons ke JSON
+// 	responseJSON, err := json.Marshal(response)
+// 	if err != nil {
+// 		http.Error(w, "Gagal mengonversi ke JSON", http.StatusInternalServerError)
+// 		apiHits.WithLabelValues(getHostname(), "api/profile", "500").Inc()
+// 		return
+// 	}
+
+// 	// Mengatur header dan memberikan respons
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write(responseJSON)
+
+// 	// Log ke konsol bahwa status adalah 200
+// 	log.Printf("API hit - Status: 200")
+// }
+
+// // generateTransactionID digunakan untuk menghasilkan transaction ID secara acak
+// func generateTransactionID() string {
+// 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+// 	const length = 20
+// 	b := make([]byte, length)
+// 	for i := range b {
+// 		b[i] = charset[rand.Intn(len(charset))]
+// 	}
+// 	return string(b)
+// }
+
+// // getHostname mengembalikan nama host
+// func getHostname() string {
+// 	hostname, err := os.Hostname()
+// 	if err != nil {
+// 		log.Println("Gagal mendapatkan nama host:", err)
+// 		return "unknown"
+// 	}
+// 	return hostname
+// }

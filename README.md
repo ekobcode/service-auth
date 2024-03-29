@@ -1,2 +1,0 @@
-# service-auth
-Golang Microservice
